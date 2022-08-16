@@ -8,6 +8,8 @@ from nasbench.lib import model_builder
 import time
 import json
 
+import datetime
+import os
 
 tf.compat.v1.disable_v2_behavior()
 tf.compat.v1.disable_eager_execution()
@@ -18,9 +20,9 @@ CONV1X1 = 'conv1x1-bn-relu'
 CONV3X3 = 'conv3x3-bn-relu'
 MAXPOOL3X3 = 'maxpool3x3'
 
-NASBENCH_TFRECORD = './nasbench_data/nasbench_full.tfrecord'
+NASBENCH_TFRECORD = '../nasbench_data/nasbench_full.tfrecord'
 DEVICE = "cuda111@2080ti"
-BATCH_SIZE = 8
+BATCH_SIZE = 1
 LOOP_NUM = 10 # how many runs for one network
 
 
@@ -60,6 +62,17 @@ def get_latency(model_spec):
 
 
 def main():
+    date = datetime.datetime.now()
+    date = date.strftime("%Y-%m-%d-%H-%M-%S")
+
+    os.mkdir("./{}".format(date))
+    config = {}
+    config["input_size"] = [BATCH_SIZE ,32 ,32 ,3]
+    config["device"] = DEVICE
+    config["runs"] = LOOP_NUM
+    with open('./{}/configs.json'.format(date), 'w') as f:
+        json.dump(config, f)  # 编码JSON数据
+
     nasbench_api = api.NASBench(NASBENCH_TFRECORD)
     latency_result = {}
 
@@ -82,12 +95,12 @@ def main():
         res = get_latency(model_spec)
 
         latency_result[h] = res
-
+        print(h, "------>", res)
         if count % 5000 == 0:
-            with open('hash_latency_{}.json'.format(str(count)), 'w') as f:
+            with open('./{}/hash_latency_{}.json'.format(date, str(count)), 'w') as f:
                 json.dump(latency_result, f)  # 编码JSON数据
 
-    with open('hash_latency.json', 'w') as f:
+    with open('./{}/hash_latency.json'.format(date), 'w') as f:
         json.dump(latency_result, f)  # 编码JSON数据
 
 
@@ -121,7 +134,7 @@ def WARM_UP():
             init = tf.compat.v1.global_variables_initializer()
             session.run(init)
 
-            for i in range(100):
+            for i in range(500):
                 # Get predict result of the graph.
                 res = session.run(net, feed_dict={input : data})
 
@@ -146,9 +159,8 @@ def test():
     print(res)
 
 if __name__ == '__main__':
-
-    # main()
-    test()
+    main()
+    # test()
 
 
 
