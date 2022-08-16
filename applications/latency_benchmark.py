@@ -11,6 +11,19 @@ import json
 import datetime
 import os
 
+
+import argparse
+
+parser = argparse.ArgumentParser("cifar")
+parser.add_argument('--test', action='store_true', default=False, help='test if it works')
+parser.add_argument('--data', type=str, default='../nasbench_data/nasbench_full.tfrecord', help='location of the tfrecord')
+parser.add_argument('--device', type=str, default='cuda111@2080ti', help='name of the device')
+parser.add_argument('--batch_size', type=int, default=1, help='batch size')
+args = parser.parse_args()
+
+
+
+
 tf.compat.v1.disable_v2_behavior()
 tf.compat.v1.disable_eager_execution()
 
@@ -20,9 +33,9 @@ CONV1X1 = 'conv1x1-bn-relu'
 CONV3X3 = 'conv3x3-bn-relu'
 MAXPOOL3X3 = 'maxpool3x3'
 
-NASBENCH_TFRECORD = '../nasbench_data/nasbench_full.tfrecord'
-DEVICE = "cuda111@2080ti"
-BATCH_SIZE = 1
+NASBENCH_TFRECORD = args.data
+DEVICE = args.device
+BATCH_SIZE = args.batch_size
 LOOP_NUM = 10 # how many runs for one network
 
 
@@ -159,8 +172,10 @@ def test():
     print(res)
 
 if __name__ == '__main__':
-    main()
-    # test()
+    if args.test:
+        test()
+    else:
+        main()
 
 
 
