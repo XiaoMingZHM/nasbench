@@ -17,15 +17,23 @@ import argparse
 parser = argparse.ArgumentParser("cifar")
 parser.add_argument('--test', action='store_true', default=False, help='test if it works')
 parser.add_argument('--data', type=str, default='../nasbench_data/nasbench_full.tfrecord', help='location of the tfrecord')
-parser.add_argument('--device', type=str, default='cuda111@2080ti', help='name of the device')
+parser.add_argument('--device', type=str, default='cuda110@2080ti', help='name of the device')
 parser.add_argument('--batch_size', type=int, default=1, help='batch size')
+parser.add_argument('--ckpt', type=str, default=None, help='the checkpoint file already searched')
+
+
 args = parser.parse_args()
-
-
-
 
 tf.compat.v1.disable_v2_behavior()
 tf.compat.v1.disable_eager_execution()
+
+
+if "cuda" in args.device:
+    print("testing cuda device")
+    # tf_config = tf.compat.v1.ConfigProto()
+    # tf_config.gpu_options.allow_growth = True
+    # tf_config.gpu_options.per_process_gpu_memory_fraction = 0.9
+
 
 INPUT = 'input'
 OUTPUT = 'output'
@@ -83,18 +91,26 @@ def main():
     config["input_size"] = [BATCH_SIZE ,32 ,32 ,3]
     config["device"] = DEVICE
     config["runs"] = LOOP_NUM
+
+    latency_result = {}
+    if args.ckpt:
+        config["check_point"] = args.ckpt
+        with open(args.ckpt) as f:
+            latency_result = json.load(f)
+
+
     with open('./{}/configs.json'.format(date), 'w') as f:
         json.dump(config, f)  # 编码JSON数据
 
     nasbench_api = api.NASBench(NASBENCH_TFRECORD)
-    latency_result = {}
 
     count = 0
 
     WARM_UP()
     for h in nasbench_api.hash_iterator():
-
         count += 1
+        if h in latency_result:
+            continue
 
         print("Running on #", count, "#")
         fixed, computed = nasbench_api.get_metrics_from_hash(h)
