@@ -83,22 +83,25 @@ def get_latency(model_spec):
 
 
 def main():
-    date = datetime.datetime.now()
-    date = date.strftime("%Y-%m-%d-%H-%M-%S")
-
-    os.mkdir("./{}".format(date))
     config = {}
     config["input_size"] = [BATCH_SIZE ,32 ,32 ,3]
     config["device"] = DEVICE
     config["runs"] = LOOP_NUM
 
     latency_result = {}
+
+    # loading checkpoint
     if args.ckpt:
         config["check_point"] = args.ckpt
+        print("loading checkpoint:", args.ckpt)
         with open(args.ckpt) as f:
             latency_result = json.load(f)
 
 
+    date = datetime.datetime.now()
+    date = date.strftime("%Y-%m-%d-%H-%M-%S")
+
+    os.mkdir("./{}".format(date))
     with open('./{}/configs.json'.format(date), 'w') as f:
         json.dump(config, f)  # 编码JSON数据
 
@@ -109,10 +112,13 @@ def main():
     WARM_UP()
     for h in nasbench_api.hash_iterator():
         count += 1
-        if h in latency_result:
-            continue
 
         print("Running on #", count, "#")
+
+        if h in latency_result:
+            print(h, "already tested")
+            continue
+
         fixed, computed = nasbench_api.get_metrics_from_hash(h)
 
         model_spec = api.ModelSpec(
